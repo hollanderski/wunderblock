@@ -1,2 +1,2 @@
 # wunderblock
-webGL interface for "Wünderblock", installation exhibited at PHITECO 2022
+webGL interface for "Wünderblock", art installation exhibited at PHITECO 2022
