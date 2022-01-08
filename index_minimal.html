@@ -1,0 +1,62 @@
+<html>
+<body>
+	<head>
+		<meta charset="utf-8" >
+		<title>Wünderblock</title>
+	</head>
+</body>
+<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script type="text/javascript">
+
+
+	function createTraces(data){
+		var data = JSON.parse(data)
+		console.log(data)
+		
+		jQuery.each(data, function(i, val) {
+		  createMesh(val);
+		});
+		
+	}
+	let cube;
+	const geometry = new THREE.BoxGeometry();
+	const material = new THREE.MeshBasicMaterial({
+	    color: 0x00ff00
+	});
+
+	function createMesh(coord){
+
+		console.log("create mesh")
+
+		cube = new THREE.Mesh(geometry, material);
+		cube.position.x=coord.x/500;
+		cube.position.y=coord.y/500;
+		scene.add(cube);
+
+	}
+
+	fetch("http://localhost:3000/traces").then(req => req.text()).then(createTraces)
+
+
+	const scene = new THREE.Scene();
+	const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+	const renderer = new THREE.WebGLRenderer();
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	document.body.appendChild(renderer.domElement);
+
+	camera.position.z = 5;
+
+	function animate() {
+	    requestAnimationFrame(animate);
+/*
+	    cube.rotation.x += 0.01;
+	    cube.rotation.y += 0.01; */
+
+	    renderer.render(scene, camera);
+	};
+
+	animate();
+</script>
+</html>

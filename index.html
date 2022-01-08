@@ -1,62 +1,309 @@
-<html>
-<body>
+<!DOCTYPE html>
+<html lang="en">
 	<head>
-		<meta charset="utf-8" >
-		<title>Wünderblock</title>
+		<title>Wunderblock</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 	</head>
-</body>
-<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script type="text/javascript">
+	<body>
 
-
-	function createTraces(data){
-		var data = JSON.parse(data)
-		console.log(data)
+		<div id="container"></div>
 		
-		jQuery.each(data, function(i, val) {
-		  createMesh(val);
-		});
+	<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+	 <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/libs/stats.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	 <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/math/MeshSurfaceSampler.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	   <script src="./js/DecalGeometry.js"></script>
+	   
+
+		<script>
+
+
+
+			const container = document.getElementById( 'container' );
+
+			let renderer, scene, camera, stats;
+			let mesh, sampler;
+			let raycaster;
+			let line;
+
+			const intersection = {
+				intersects: false,
+				point: new THREE.Vector3(),
+				normal: new THREE.Vector3()
+			};
+			const mouse = new THREE.Vector2();
+			const intersects = [];
+
+			const textureLoader = new THREE.TextureLoader();
+
+
+			// à voir perf si garder clone + changement texture
+			/*
+			const decalMaterial = new THREE.MeshPhongMaterial( {
+						//specular: 0x111111,
+						//color : 0xffff00,
+						map: textureLoader.load( 'texture/cv/skinmask.png' ),// textureLoader.load( 'texture/cv/blur.png' ),//textureLoader.load( 'texture/spec100.png' ),// textureLoader.load( 'texture/SpecularMapr.png' ),//mytexture,//mytexture,//decalDiffuse
+						//bumpMap :  textureLoader.load( 'texture/img32b.png' ),// mytexture,
+						//map:  textureLoader.load( 'texture/spec.png' ),//mytexture,//mytexture,//decalDiffuse
+						bumpMap :    textureLoader.load( 'texture/cv/blurotsu100trans.png' ),//textureLoader.load( 'texture/bump.png' ),
+						bumpScale : 15,
+						opacity: 0.6,
+						depthWrite: false,
+    					alphaTest: 0.05,
+						//normalMap: normaldecal,//decalNormal,
+						shininess: 25,
+						transparent: true,
+						depthTest: true,
+						//depthWrite: false,
+						shading: THREE.SmoothShading,
+						side: THREE.DoubleSide, 
+						polygonOffset: true,
+						polygonOffsetFactor: - 4,
+						wireframe: false
+					} );
+				*/
+
+
+			const decals = [];
+			let mouseHelper;
+			const position = new THREE.Vector3();
+			const orientation = new THREE.Euler();
+			const size = new THREE.Vector3( 10, 10, 10 );
+
+			const params = {
+				minScale: 10,
+				maxScale: 80,
+				rotate: true,
+				clear: function () {
+
+					removeDecals();
+
+				}
+			};
+
+			window.addEventListener( 'load', init );
+
+			function init() {
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+				scene = new THREE.Scene();
+				//scene.background = new THREE.Color( 0x0000ff );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+				camera.position.z = 120;
+
+				// Limit zoom camera
+				const controls = new THREE.OrbitControls( camera, renderer.domElement );
+				//controls.minDistance = 50;
+				//controls.maxDistance = 200;
+
+				scene.add( new THREE.AmbientLight( 0x443333 ) );
+
+				const dirLight1 = new THREE.DirectionalLight( 0xffddcc, 1 );
+				dirLight1.position.set( 1, 0.75, 0.5 );
+				scene.add( dirLight1 );
+
+				const dirLight2 = new THREE.DirectionalLight( 0xccccff, 1 );
+				dirLight2.position.set( - 1, 0.75, - 0.5 );
+				scene.add( dirLight2 );
+
+				const geometry = new THREE.BufferGeometry();
+				geometry.setFromPoints( [ new THREE.Vector3(), new THREE.Vector3() ] );
+
+				line = new THREE.Line( geometry, new THREE.LineBasicMaterial() );
+				scene.add( line );
+
+				mouseHelper = new THREE.Mesh( new THREE.BoxGeometry( 1, 1, 10 ), new THREE.MeshNormalMaterial() );
+				mouseHelper.visible = false;
+				scene.add( mouseHelper );
+
+
+
+				buildTerrain();
+				// get all existing traces
+				fetch("http://localhost:3000/traces").then(req => req.text()).then(createTraces);
+				toyTraces();
+
+
+				window.addEventListener( 'resize', onWindowResize );
+
+				let moved = false;
+
+				controls.addEventListener( 'change', function () {
+
+					moved = true;
+
+				} );
+
+				window.addEventListener( 'pointerdown', function () {
+
+					moved = false;
+
+				} );
+
+
 		
-	}
-	let cube;
-	const geometry = new THREE.BoxGeometry();
-	const material = new THREE.MeshBasicMaterial({
-	    color: 0x00ff00
-	});
+				onWindowResize();
+				animate();
 
-	function createMesh(coord){
+			}
 
-		console.log("create mesh")
+			/* Création du terrain */
 
-		cube = new THREE.Mesh(geometry, material);
-		cube.position.x=coord.x/500;
-		cube.position.y=coord.y/500;
-		scene.add(cube);
+			function buildTerrain() {
 
-	}
-
-	fetch("http://localhost:3000/traces").then(req => req.text()).then(createTraces)
+				var nSkin = '1'; // voir 1 et 8
+				var skinPath = 'texture/skin/Skin_0'+nSkin+'_';
 
 
-	const scene = new THREE.Scene();
-	const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+				const geometry = new THREE.PlaneGeometry( 500, 500 );
+				const material = new THREE.MeshPhongMaterial( {
+						specular: 0x111111,
+						aoMap: textureLoader.load( skinPath+'ambientocclusion.jpg'),
+						metalnessMap : textureLoader.load( skinPath+'metallic.jpg'),
+						roughnessMap : textureLoader.load( skinPath+'roughness.jpg'),
+						map: textureLoader.load( skinPath+'basecolor.jpg'),//( 'texture/Map-COL.jpg' ),
+						//specularMap: textureLoader.load( 'texture/Map-SPEC.jpg' ), ??
+						normalMap: textureLoader.load( skinPath+'normal.jpg'),//textureLoader.load( 'texture/Infinite-Level_02_Tangent_SmoothUV.jpg' ), 
+						shading: THREE.SmoothShading, // ?
+						shininess: 25
+					} ); 
+				mesh = new THREE.Mesh( geometry, material );
+				scene.add( mesh );
 
-	const renderer = new THREE.WebGLRenderer();
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	document.body.appendChild(renderer.domElement);
+				
 
-	camera.position.z = 5;
+			}
 
-	function animate() {
-	    requestAnimationFrame(animate);
-/*
-	    cube.rotation.x += 0.01;
-	    cube.rotation.y += 0.01; */
 
-	    renderer.render(scene, camera);
-	};
+			function createTraces(data){
 
-	animate();
-</script>
+				console.log("create traces");
+
+				// sampler ne sera plus utilisé ici, seulement dans la génération POST
+				sampler = new THREE.MeshSurfaceSampler( mesh )
+					.setWeightAttribute( 'color' )
+					.build();
+
+				const _position = new THREE.Vector3();
+
+				var data = JSON.parse(data)
+				console.log(data)
+				
+				// ici ajouter args blob image et son
+				jQuery.each(data, function(i, val) {
+					sampler.sample( _position );
+					genTrace(_position);
+					//genTrace(val);
+				});
+
+
+			}
+
+			function toyTraces(){
+
+				console.log("100 random traces");
+
+				// sampler ne sera plus utilisé ici, seulement dans la génération POST
+				sampler = new THREE.MeshSurfaceSampler( mesh )
+					.setWeightAttribute( 'color' )
+					.build();
+
+				const _position = new THREE.Vector3();
+
+				// Sample randomly from the surface, creating an instance of the sample
+				// geometry at each sample point.
+				for ( let i = 0; i < 100; i ++ ) {
+
+					sampler.sample( _position );
+					genTrace(_position);
+
+				}
+
+			}
+
+
+			// Trace constructor + Gen Trace data pos
+			function genTrace(position) {
+
+
+				orientation.copy( mouseHelper.rotation );
+
+				if ( params.rotate ) orientation.z = Math.random() * 2 * Math.PI;
+
+				// Size of trace : 
+				const scale = params.minScale + Math.random() * ( params.maxScale - params.minScale );
+				size.set( scale, scale, scale );
+
+				const material =  new THREE.MeshPhongMaterial( {
+	
+						map: textureLoader.load( 'texture/cv/skinmask.png' ),
+						bumpMap :    textureLoader.load( 'texture/cv/blurotsu100trans.png' ),
+						bumpScale : 15,
+						opacity: 0.6,
+						depthWrite: false,
+    					alphaTest: 0.05,
+						shininess: 25,
+						transparent: true,
+						depthTest: true,
+						side: THREE.DoubleSide, 
+						polygonOffset: true,
+						polygonOffsetFactor: - 4,
+						wireframe: false
+					} );
+			
+				const m = new THREE.Mesh( new THREE.DecalGeometry( mesh, position, orientation, size ), material );
+
+
+				
+
+				decals.push( m );
+				scene.add( m );
+
+			}
+
+			function removeDecals() {
+
+				decals.forEach( function ( d ) {
+
+					scene.remove( d );
+
+				} );
+
+				decals.length = 0;
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				renderer.render( scene, camera );
+
+				stats.update();
+
+			}
+
+		</script>
+
+	</body>
 </html>

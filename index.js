@@ -4,13 +4,15 @@ var mysql = require('mysql');
 const path = require('path');
 var cors = require('cors');
 
+
 const app = express();
 app.use(cors({origin: '*'}));
+app.use(express.static('public'));
 
 const port = 3000;
 
 
-
+/*
 var connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
@@ -18,11 +20,21 @@ var connection = mysql.createConnection({
   database: 'test'
 })
 
+*/
+var connection = mysql.createConnection({
+  host: 'xoqhbtqwunder.mysql.db',
+  user: 'xoqhbtqwunder',
+  password: 'Onvadroitdanslemur2022',
+  database: 'xoqhbtqwunder'
+}) 
+
 
 
 
 var jsonParser = bodyParser.json();
 var urlencodedParser = bodyParser.urlencoded({ extended: false })
+
+
 
 // https://www.tutsmake.com/node-js-fetch-and-display-data-from-mysql-database-in-html-list/ 
 // https://www.bezkoder.com/node-js-rest-api-express-mysql/
