@@ -44,15 +44,6 @@ fs.readFile('db.txt', function(err, data) {
 
 
 
-/*
-var connection = mysql.createConnection({
-  host: 'xoqhbtqwunder.mysql.db',
-  user: 'xoqhbtqwunder',
-  password: 'Onvadroitdanslemur2022',
-  database: 'xoqhbtqwunder'
-}) 
-*/
-
 
 
 var jsonParser = bodyParser.json();
