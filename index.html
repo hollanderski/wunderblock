@@ -4,9 +4,58 @@
 		<title>Wunderblock</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style type="text/css">
+			#overlay {
+			position: absolute;
+			font-size: 16px;
+			z-index: 2;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-direction: column;
+			/*background: rgba(0,0,0,0.7); */
+			background-image: url("texture/skin/Skin_01_basecolor.jpg");
+		}
+
+			#overlay button {
+				background: transparent;
+				border: 0;
+				border: 1px solid rgb(255, 255, 255);
+				border-radius: 4px;
+				color: #ffffff;
+				padding: 12px 18px;
+				text-transform: uppercase;
+				cursor: pointer;
+			}
+		</style>
 	</head>
 	<body>
+		<div  id="song">
+		<!--<audio id="breath1" loop preload="auto" style="display: none">
+			<source src="sound/breath1.ogg" type="audio/ogg">
+			<source src="sound/breath1.mp3" type="audio/mpeg">
+		</audio>
+		<audio id="breath2" loop preload="auto" style="display: none">
+			<source src="sound/breath2.ogg" type="audio/ogg">
+			<source src="sound/breath2.mp3" type="audio/mpeg">
+		</audio>
+		<audio id="breath3" loop preload="auto" style="display: none">
+			<source src="sound/breath3.ogg" type="audio/ogg">
+			<source src="sound/breath3.mp3" type="audio/mpeg">
+		</audio>
+		<audio id="breath4" loop preload="auto" style="display: none">
+			<source src="sound/breath4.ogg" type="audio/ogg">
+			<source src="sound/breath4.mp3" type="audio/mpeg">
+		</audio>-->
+		</div>
 
+		<div id="overlay">
+			<button id="startButton">Enter the WUnderblock</button>
+		</div>
 		<div id="container"></div>
 		
 	<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -15,10 +64,83 @@
 	 <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/math/MeshSurfaceSampler.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	   <script src="./js/DecalGeometry.js"></script>
+	    <script src="./js/socket.io.js"></script>
+
 	   
 
 		<script>
 
+
+
+
+			var socket = io.connect( "http://localhost:3000"); //io();//.connect("127.0.0.1", {port: 3000});
+
+			socket.on("foo", function(message) { 
+           			console.log("foo: ", message);
+           			genTrace(genPosition(), message); 
+           	});
+
+
+			let traceData2;
+
+			/* 
+
+				Before page finish load, get all audio file and preload them
+				+ add audio file in cache buffer would be better
+
+			*/
+
+			function getData(){
+				console.log("getdata")
+				// if audio not in cache
+				fetch("/traces").then(req => req.text()).then(loadAudio);
+			}
+
+
+			function loadAudio(data){
+				this.traceData = JSON.parse(data); // + mettre en cache
+				traceData2 = this.traceData;
+
+				console.log("loadAudio ", this.traceData, traceData2);
+				jQuery.each(this.traceData, function(i, val) {
+					createAudio(val.id);
+				});
+
+			}
+
+
+			function createAudio(id){
+
+				console.log("createAudio ", id)
+
+				// check file exist ? eviter ...
+
+				$.get('sound/breath'+id+'.mp3')
+				    .done(function() { 
+
+				    	console.log("oui ", id)
+
+				    	// exists
+				        var sound      = document.createElement('audio');
+						sound.id       = 'breath'+id;
+						sound.preload = 'auto';
+						sound.loop = true;
+						sound.src      = 'sound/breath'+id+'.mp3';
+						sound.type     = 'audio/mpeg';
+						sound.style.display = "none";
+						document.getElementById('song').appendChild(sound);
+
+						return true;
+
+				    }).fail(function() { 
+				        // not exists code
+				        console.log("404 ", id)
+				        return false;
+				    })
+
+			}
+
+			getData();
 
 
 			const container = document.getElementById( 'container' );
@@ -37,6 +159,8 @@
 			const intersects = [];
 
 			const textureLoader = new THREE.TextureLoader();
+			const audioLoader = new THREE.AudioLoader();
+			const listener = new THREE.AudioListener();
 
 
 			// à voir perf si garder clone + changement texture
@@ -73,7 +197,7 @@
 			const size = new THREE.Vector3( 10, 10, 10 );
 
 			const params = {
-				minScale: 10,
+				minScale: 30,//10
 				maxScale: 80,
 				rotate: true,
 				clear: function () {
@@ -83,9 +207,16 @@
 				}
 			};
 
-			window.addEventListener( 'load', init );
+			//window.addEventListener( 'load', init );
+			const startButton = document.getElementById( 'startButton' );
+			startButton.addEventListener( 'click', init );
 
 			function init() {
+
+				console.log("init ", this.traceData);
+
+				const overlay = document.getElementById( 'overlay' );
+				overlay.remove();
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
@@ -101,6 +232,7 @@
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
 				camera.position.z = 120;
+				camera.add( listener );
 
 				// Limit zoom camera
 				const controls = new THREE.OrbitControls( camera, renderer.domElement );
@@ -128,11 +260,29 @@
 				scene.add( mouseHelper );
 
 
+	
+
+
 
 				buildTerrain();
 				// get all existing traces
-				fetch("http://localhost:3000/traces").then(req => req.text()).then(createTraces);
-				toyTraces();
+				//fetch("http://xoqhbtq.cluster030.hosting.ovh.net/traces").then(req => req.text()).then(createTraces);
+				//fetch("/traces").then(req => req.text()).then(createTraces);
+				/*
+				console.log(this.traceData);
+				if(this.traceData){
+					console.log("deja load")
+					createTraces(this.traceData);
+				}
+				else{ // pas ok car audio pas créé
+					console.log("pas")
+					fetch("/traces").then(req => req.text()).then(createTraces);
+				}
+				*/
+
+				createTraces();
+				
+				//toyTraces();
 
 
 				window.addEventListener( 'resize', onWindowResize );
@@ -181,34 +331,49 @@
 				mesh = new THREE.Mesh( geometry, material );
 				scene.add( mesh );
 
+				// sampler ne sera plus utilisé ici, seulement dans la génération POST
+					sampler = new THREE.MeshSurfaceSampler( mesh )
+						.setWeightAttribute( 'color' )
+						.build();
+
 				
 
 			}
 
 
-			function createTraces(data){
+			function createTraces(){
 
-				console.log("create traces");
+				//console.log("create traces", data, this.traceData, traceData2);
 
-				// sampler ne sera plus utilisé ici, seulement dans la génération POST
-				sampler = new THREE.MeshSurfaceSampler( mesh )
-					.setWeightAttribute( 'color' )
-					.build();
+				if(this.traceData){
+
+					console.log("ok"); 
+
+					
+					// ici ajouter args blob image et son
+					jQuery.each(this.traceData, function(i, val) {
+						
+						genTrace(genPosition(), val);
+						//genTrace(val);
+					});
+
+				}
+				else{
+					console.log("pas ok")
+				}
+
+			}
+
+
+			function genPosition(){
 
 				const _position = new THREE.Vector3();
-
-				var data = JSON.parse(data)
-				console.log(data)
-				
-				// ici ajouter args blob image et son
-				jQuery.each(data, function(i, val) {
-					sampler.sample( _position );
-					genTrace(_position);
-					//genTrace(val);
-				});
-
-
+				sampler.sample( _position );
+				return _position;
 			}
+
+
+
 
 			function toyTraces(){
 
@@ -223,18 +388,26 @@
 
 				// Sample randomly from the surface, creating an instance of the sample
 				// geometry at each sample point.
-				for ( let i = 0; i < 100; i ++ ) {
+				for ( let i = 0; i < 3; i ++ ) {
 
 					sampler.sample( _position );
-					genTrace(_position);
+					genTrace(_position, i);
 
 				}
 
 			}
 
+			function getRandomInt(min, max) {
+			    min = Math.ceil(min);
+			    max = Math.floor(max);
+			    return Math.floor(Math.random() * (max - min + 1)) + min;
+			}
 
-			// Trace constructor + Gen Trace data pos
-			function genTrace(position) {
+			// Trace constructor + Gen Trace data po
+
+			function genTrace(position, data) {
+
+				console.log("genTrace ", data)
 
 
 				orientation.copy( mouseHelper.rotation );
@@ -247,9 +420,9 @@
 
 				const material =  new THREE.MeshPhongMaterial( {
 	
-						map: textureLoader.load( 'texture/cv/skinmask.png' ),
-						bumpMap :    textureLoader.load( 'texture/cv/blurotsu100trans.png' ),
-						bumpScale : 15,
+						map: textureLoader.load( 'texture/cv/'+data.map+'.png' ),
+						bumpMap :    textureLoader.load( 'texture/cv/'+data.bump+'.png' ),
+						bumpScale : 30,
 						opacity: 0.6,
 						depthWrite: false,
     					alphaTest: 0.05,
@@ -265,10 +438,73 @@
 				const m = new THREE.Mesh( new THREE.DecalGeometry( mesh, position, orientation, size ), material );
 
 
-				
+
+				var nSound = getRandomInt(1,3);
+				var sound = new THREE.PositionalAudio( listener );
+				const audioElem = document.getElementById( 'breath'+(data.id) );
+
+				console.log("audioElem", audioElem)
+				// ssi audio exist
+				if(audioElem){
+					sound.setMediaElementSource( audioElem );
+					sound.setRefDistance( 20 );
+					sound.setVolume( 10 );
+					audioElem.play();
+					m.add( sound );
+
+				}
 
 				decals.push( m );
 				scene.add( m );
+
+
+			}
+			
+			function genTrace2(position, index) {
+
+				console.log("index ", index+1);
+
+
+				orientation.copy( mouseHelper.rotation );
+
+				if ( params.rotate ) orientation.z = Math.random() * 2 * Math.PI;
+
+				// Size of trace : 
+				const scale = params.minScale + Math.random() * ( params.maxScale - params.minScale );
+				size.set( scale, scale, scale );
+
+				const material =  new THREE.MeshPhongMaterial( {
+	
+						map: textureLoader.load( 'texture/cv/skinmask.png' ),
+						bumpMap :    textureLoader.load( 'texture/cv/blurotsu100trans.png' ),
+						bumpScale : 30,
+						opacity: 0.6,
+						depthWrite: false,
+    					alphaTest: 0.05,
+						shininess: 25,
+						transparent: true,
+						depthTest: true,
+						side: THREE.DoubleSide, 
+						polygonOffset: true,
+						polygonOffsetFactor: - 4,
+						wireframe: false
+					} );
+			
+				const m = new THREE.Mesh( new THREE.DecalGeometry( mesh, position, orientation, size ), material );
+
+
+
+				var nSound = getRandomInt(1,3);
+				var sound = new THREE.PositionalAudio( listener );
+				const audioElem = document.getElementById( 'breath'+(index+1) );
+				sound.setMediaElementSource( audioElem );
+				sound.setRefDistance( 20 );
+				sound.setVolume( 10 );
+				audioElem.play();
+				m.add( sound );
+				decals.push( m );
+				scene.add( m );
+
 
 			}
 

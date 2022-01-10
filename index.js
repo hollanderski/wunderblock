@@ -3,31 +3,55 @@ var bodyParser = require('body-parser');
 var mysql = require('mysql');
 const path = require('path');
 var cors = require('cors');
+const fs = require('fs');
+
 
 
 const app = express();
 app.use(cors({origin: '*'}));
 app.use(express.static('public'));
+var server = require('http').createServer(app);
+
+const io = require('socket.io')(server, {
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ["GET", "POST"],
+        transports: ['websocket', 'polling'],
+        credentials: true
+    },
+    allowEIO3: true
+});
+
 
 const port = 3000;
 
+var connection;
+
+fs.readFile('db.txt', function(err, data) {
+    if(err) throw err;
+
+    const cred = data.toString().replace(/\r\n/g,'\n').split('\n');
+
+    connection = mysql.createConnection({
+      host: cred[0],
+      user: cred[1],
+      password: cred[2],
+      database: cred[3]
+    })
+
+
+});
+
+
 
 /*
-var connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'test'
-})
-
-*/
 var connection = mysql.createConnection({
   host: 'xoqhbtqwunder.mysql.db',
   user: 'xoqhbtqwunder',
   password: 'Onvadroitdanslemur2022',
   database: 'xoqhbtqwunder'
 }) 
-
+*/
 
 
 
@@ -40,14 +64,17 @@ var urlencodedParser = bodyParser.urlencoded({ extended: false })
 // https://www.bezkoder.com/node-js-rest-api-express-mysql/
 
 const Trace = function(trace) {
+  this.id = trace.id;
   this.x = trace.x;
   this.y = trace.y;
+  this.map = trace.map;
+  this.bump = trace.bump;
   //this.sound = trace.breath;
 };
 
 Trace.getAll = (title, result) => {
 
-	connection.query('SELECT x, y FROM traces', function (err, rows, fields) {
+	connection.query('SELECT id, x, y, map, bump FROM traces', function (err, rows, fields) {
 		if (err){
 			console.log("error ", err);
 			result(null, err);
@@ -102,8 +129,12 @@ app.post('/traces', jsonParser, function(req, res){
   // Create a Trace
   const trace = new Trace({
     x: req.body.x,
-    y: req.body.y
+    y: req.body.y,
+    map: req.body.map,
+    bump: req.body.bump
   });
+
+  // Save file /!\ 
 
   // Save Trace in the database
   Trace.create(trace, (err, data) => {
@@ -112,7 +143,11 @@ app.post('/traces', jsonParser, function(req, res){
         message:
           err.message || "Some error occurred while creating the Trace."
       });
-    else res.send(data);
+    else{
+
+      io.sockets.emit("foo", req.body);
+      res.send(data);
+    }
   });
 });
 
@@ -126,11 +161,8 @@ app.get('/about', function(req, res){
 });
 
 app.get('/', function(req, res) {
-  res.sendFile(path.join(__dirname, '/index.html'));
+  res.sendFile(path.join(__dirname, '/bloom.html'));
 });
 
 
-
-
-
-app.listen(port);
+server.listen(3000);
