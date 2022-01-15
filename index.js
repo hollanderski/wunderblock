@@ -169,7 +169,7 @@ app.post('/traces', (req, res) => {
                 message: 'Data empty'
             });
         } else {
-            //Use the name of the input field (i.e. "avatar") to retrieve the uploaded file
+            //Use the name of the input field to retrieve the uploaded file
             let audio = req.files.audio;
             let bumpmap = req.files.bumpmap;
             let map = req.files.map;
@@ -185,7 +185,7 @@ app.post('/traces', (req, res) => {
               console.log("moving files")
 
 
-              //Use the mv() method to place the file in upload directory (i.e. "uploads")
+              //Use the mv() method to place the file in upload directory 
               audio.mv('./public/sound/' + audio.name);
               bumpmap.mv('./public/texture/' + bumpmap.name);
               map.mv('./public/texture/' + map.name);
