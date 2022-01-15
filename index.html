@@ -35,53 +35,120 @@
 	</head>
 	<body>
 		<div  id="song">
-		<!--<audio id="breath1" loop preload="auto" style="display: none">
-			<source src="sound/breath1.ogg" type="audio/ogg">
-			<source src="sound/breath1.mp3" type="audio/mpeg">
-		</audio>
-		<audio id="breath2" loop preload="auto" style="display: none">
-			<source src="sound/breath2.ogg" type="audio/ogg">
-			<source src="sound/breath2.mp3" type="audio/mpeg">
-		</audio>
-		<audio id="breath3" loop preload="auto" style="display: none">
-			<source src="sound/breath3.ogg" type="audio/ogg">
-			<source src="sound/breath3.mp3" type="audio/mpeg">
-		</audio>
-		<audio id="breath4" loop preload="auto" style="display: none">
-			<source src="sound/breath4.ogg" type="audio/ogg">
-			<source src="sound/breath4.mp3" type="audio/mpeg">
-		</audio>-->
 		</div>
 
 		<div id="overlay">
-			<button id="startButton">Enter the WUnderblock</button>
+			<button id="startButton">Enter the Wunderblock</button>
 		</div>
 		<div id="container"></div>
 		
+	<script src="./js/socket.io.js"></script>
+	<!--<script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>-->
 	<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	 <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/libs/stats.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	 <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/math/MeshSurfaceSampler.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	   <script src="./js/DecalGeometry.js"></script>
-	    <script src="./js/socket.io.js"></script>
+	   <script src="./js/perlin2.js"></script>
+	     <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/Pass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/ShaderPass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/shaders/CopyShader.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/shaders/LuminosityHighPassShader.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-	   
+
+	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/EffectComposer.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/RenderPass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/UnrealBloomPass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+	    <script type="x-shader/x-vertex" id="vertexshader">
+
+			varying vec2 vUv;
+
+			void main() {
+
+				vUv = uv;
+
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+			uniform sampler2D baseTexture;
+			uniform sampler2D bloomTexture;
+
+			varying vec2 vUv;
+
+			void main() {
+
+				gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+
+			}
+
+		</script>
 
 		<script>
 
+			const today = new Date().toISOString().split('T')[0]
+			var dir = 1;
+
+			var clock = new THREE.Clock();
+			var delta = 0;
+
+			const ENTIRE_SCENE = 0, BLOOM_SCENE = 1;
+
+			let bloomComposer, finalComposer;
+
+			const bloomLayer = new THREE.Layers();
+			bloomLayer.set( BLOOM_SCENE );
+
+			const paramsBloom = {
+				exposure: 1,
+				bloomStrength: 3, //3
+				bloomThreshold: 0,
+				bloomRadius: 0.2,
+				scene: "Scene with Glow"
+			};
+
+			const darkMaterial = new THREE.MeshBasicMaterial( { color: "black" } );
+			const materials = {};
 
 
 
-			var socket = io.connect( "http://localhost:3000"); //io();//.connect("127.0.0.1", {port: 3000});
+			//var socket = io.connect("localhost:3000");//("145.239.37.162:3000")//( "http://localhost:3000");
+			var socket = io(); //io.connect("http://xoqhbtq.cluster030.hosting.ovh.net")
 
-			socket.on("foo", function(message) { 
-           			console.log("foo: ", message);
-           			genTrace(genPosition(), message); 
+			socket.on("createTrace", function(message){
+
+				createAudio(message.sound);
+				genTrace(message); 
+				
+				//newTrace(message)
+
            	});
 
 
+
+
 			let traceData2;
+
+
+			/* Utils */
+
+
+			function hmsToSeconds(s) {
+			  var b = s.split(':');
+			  return b[0]*3600 + b[1]*60 + (+b[2] || 0);
+			}
+
+			function ramp(x, in_min, in_max, out_min, out_max) {
+			  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+			}
+ 
+
 
 			/* 
 
@@ -91,7 +158,6 @@
 			*/
 
 			function getData(){
-				console.log("getdata")
 				// if audio not in cache
 				fetch("/traces").then(req => req.text()).then(loadAudio);
 			}
@@ -101,31 +167,28 @@
 				this.traceData = JSON.parse(data); // + mettre en cache
 				traceData2 = this.traceData;
 
-				console.log("loadAudio ", this.traceData, traceData2);
 				jQuery.each(this.traceData, function(i, val) {
-					createAudio(val.id);
+					createAudio(val.sound);
 				});
 
 			}
 
 
-			function createAudio(id){
+			function createAudio(path){
 
-				console.log("createAudio ", id)
 
 				// check file exist ? eviter ...
 
-				$.get('sound/breath'+id+'.mp3')
+				$.get('sound/'+path)
 				    .done(function() { 
 
-				    	console.log("oui ", id)
 
 				    	// exists
 				        var sound      = document.createElement('audio');
-						sound.id       = 'breath'+id;
+						sound.id       = path;
 						sound.preload = 'auto';
 						sound.loop = true;
-						sound.src      = 'sound/breath'+id+'.mp3';
+						sound.src      = 'sound/'+path;
 						sound.type     = 'audio/mpeg';
 						sound.style.display = "none";
 						document.getElementById('song').appendChild(sound);
@@ -134,7 +197,7 @@
 
 				    }).fail(function() { 
 				        // not exists code
-				        console.log("404 ", id)
+				        console.log("404 ", path)
 				        return false;
 				    })
 
@@ -161,35 +224,6 @@
 			const textureLoader = new THREE.TextureLoader();
 			const audioLoader = new THREE.AudioLoader();
 			const listener = new THREE.AudioListener();
-
-
-			// à voir perf si garder clone + changement texture
-			/*
-			const decalMaterial = new THREE.MeshPhongMaterial( {
-						//specular: 0x111111,
-						//color : 0xffff00,
-						map: textureLoader.load( 'texture/cv/skinmask.png' ),// textureLoader.load( 'texture/cv/blur.png' ),//textureLoader.load( 'texture/spec100.png' ),// textureLoader.load( 'texture/SpecularMapr.png' ),//mytexture,//mytexture,//decalDiffuse
-						//bumpMap :  textureLoader.load( 'texture/img32b.png' ),// mytexture,
-						//map:  textureLoader.load( 'texture/spec.png' ),//mytexture,//mytexture,//decalDiffuse
-						bumpMap :    textureLoader.load( 'texture/cv/blurotsu100trans.png' ),//textureLoader.load( 'texture/bump.png' ),
-						bumpScale : 15,
-						opacity: 0.6,
-						depthWrite: false,
-    					alphaTest: 0.05,
-						//normalMap: normaldecal,//decalNormal,
-						shininess: 25,
-						transparent: true,
-						depthTest: true,
-						//depthWrite: false,
-						shading: THREE.SmoothShading,
-						side: THREE.DoubleSide, 
-						polygonOffset: true,
-						polygonOffsetFactor: - 4,
-						wireframe: false
-					} );
-				*/
-
-
 			const decals = [];
 			let mouseHelper;
 			const position = new THREE.Vector3();
@@ -213,7 +247,6 @@
 
 			function init() {
 
-				console.log("init ", this.traceData);
 
 				const overlay = document.getElementById( 'overlay' );
 				overlay.remove();
@@ -230,8 +263,8 @@
 				scene = new THREE.Scene();
 				//scene.background = new THREE.Color( 0x0000ff );
 
-				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
-				camera.position.z = 120;
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 4000 ); // 1, 1000
+				camera.position.z = 1000; //120
 				camera.add( listener );
 
 				// Limit zoom camera
@@ -262,30 +295,46 @@
 
 	
 
+				/* Aura effect */
+
+				const renderScene = new THREE.RenderPass( scene, camera );
+
+				const bloomPass = new THREE.UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+				bloomPass.threshold = paramsBloom.bloomThreshold;
+				bloomPass.strength = paramsBloom.bloomStrength;
+				bloomPass.radius = paramsBloom.bloomRadius;
+
+				bloomComposer = new THREE.EffectComposer( renderer );
+				bloomComposer.renderToScreen = false;
+				bloomComposer.addPass( renderScene );
+				bloomComposer.addPass( bloomPass );
+
+				const finalPass = new THREE.ShaderPass(
+					new THREE.ShaderMaterial( {
+						uniforms: {
+							baseTexture: { value: null },
+							bloomTexture: { value: bloomComposer.renderTarget2.texture }
+						},
+						vertexShader: document.getElementById( 'vertexshader' ).textContent,
+						fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+						defines: {}
+					} ), "baseTexture"
+				);
+				finalPass.needsSwap = true; 
+
+				finalComposer = new THREE.EffectComposer( renderer );
+				finalComposer.addPass( renderScene );
+				finalComposer.addPass( finalPass );
+
 
 
 				buildTerrain();
-				// get all existing traces
-				//fetch("http://xoqhbtq.cluster030.hosting.ovh.net/traces").then(req => req.text()).then(createTraces);
-				//fetch("/traces").then(req => req.text()).then(createTraces);
-				/*
-				console.log(this.traceData);
-				if(this.traceData){
-					console.log("deja load")
-					createTraces(this.traceData);
-				}
-				else{ // pas ok car audio pas créé
-					console.log("pas")
-					fetch("/traces").then(req => req.text()).then(createTraces);
-				}
-				*/
-
 				createTraces();
 				
 				//toyTraces();
 
-
-				window.addEventListener( 'resize', onWindowResize );
+/*
+				window.addEventListener( 'resize', onWindowResize ); */
 
 				let moved = false;
 
@@ -303,7 +352,7 @@
 
 
 		
-				onWindowResize();
+			//	onWindowResize();
 				animate();
 
 			}
@@ -316,19 +365,42 @@
 				var skinPath = 'texture/skin/Skin_0'+nSkin+'_';
 
 
-				const geometry = new THREE.PlaneGeometry( 500, 500 );
+				const geometry = new THREE.PlaneGeometry(  2000, 2000, 256, 256);
 				const material = new THREE.MeshPhongMaterial( {
 						specular: 0x111111,
 						aoMap: textureLoader.load( skinPath+'ambientocclusion.jpg'),
-						metalnessMap : textureLoader.load( skinPath+'metallic.jpg'),
-						roughnessMap : textureLoader.load( skinPath+'roughness.jpg'),
+						displacementMap : textureLoader.load( skinPath+'height.jpg'),
+						//metalnessMap : textureLoader.load( skinPath+'metallic.jpg'),
+						//roughnessMap : textureLoader.load( skinPath+'roughness.jpg'),
 						map: textureLoader.load( skinPath+'basecolor.jpg'),//( 'texture/Map-COL.jpg' ),
 						//specularMap: textureLoader.load( 'texture/Map-SPEC.jpg' ), ??
 						normalMap: textureLoader.load( skinPath+'normal.jpg'),//textureLoader.load( 'texture/Infinite-Level_02_Tangent_SmoothUV.jpg' ), 
-						shading: THREE.SmoothShading, // ?
 						shininess: 25
 					} ); 
 				mesh = new THREE.Mesh( geometry, material );
+
+
+				 
+
+				//Perlin noise on terrain 
+
+				var peak = 100;
+				var smoothing = 150; //300
+
+				var vertices = mesh.geometry.attributes.position.array;
+
+    			for (var i = 0; i <= vertices.length; i += 3) {
+						vertices[i+2] = peak * noise.perlin2(
+		            (mesh.position.x + vertices[i])/smoothing, 
+		            (mesh.position.z + vertices[i+1])/smoothing
+		        );
+		    }
+				mesh.geometry.attributes.position.needsUpdate = true;
+				mesh.geometry.computeVertexNormals();
+
+				
+
+
 				scene.add( mesh );
 
 				// sampler ne sera plus utilisé ici, seulement dans la génération POST
@@ -343,23 +415,18 @@
 
 			function createTraces(){
 
-				//console.log("create traces", data, this.traceData, traceData2);
-
 				if(this.traceData){
-
-					console.log("ok"); 
-
 					
 					// ici ajouter args blob image et son
 					jQuery.each(this.traceData, function(i, val) {
 						
-						genTrace(genPosition(), val);
+						genTrace(val);
 						//genTrace(val);
 					});
 
 				}
 				else{
-					console.log("pas ok")
+					console.log("ERROR")
 				}
 
 			}
@@ -374,10 +441,8 @@
 
 
 
-
 			function toyTraces(){
 
-				console.log("100 random traces");
 
 				// sampler ne sera plus utilisé ici, seulement dans la génération POST
 				sampler = new THREE.MeshSurfaceSampler( mesh )
@@ -405,23 +470,24 @@
 
 			// Trace constructor + Gen Trace data po
 
-			function genTrace(position, data) {
+			function genTrace(data) {
 
-				console.log("genTrace ", data)
+				var position = new THREE.Vector3(data.x, data.y, data.z);
+
 
 
 				orientation.copy( mouseHelper.rotation );
 
-				if ( params.rotate ) orientation.z = Math.random() * 2 * Math.PI;
+				//if ( params.rotate ) orientation.z = Math.random() * 2 * Math.PI;
 
 				// Size of trace : 
 				const scale = params.minScale + Math.random() * ( params.maxScale - params.minScale );
 				size.set( scale, scale, scale );
 
 				const material =  new THREE.MeshPhongMaterial( {
-	
-						map: textureLoader.load( 'texture/cv/'+data.map+'.png' ),
-						bumpMap :    textureLoader.load( 'texture/cv/'+data.bump+'.png' ),
+						//color: color,
+						map: textureLoader.load( 'texture/cv/'+data.map ),
+						bumpMap :    textureLoader.load( 'texture/cv/'+data.bumpmap ),
 						bumpScale : 30,
 						opacity: 0.6,
 						depthWrite: false,
@@ -437,71 +503,48 @@
 			
 				const m = new THREE.Mesh( new THREE.DecalGeometry( mesh, position, orientation, size ), material );
 
-
+				m.userData.freq = data.freq;
 
 				var nSound = getRandomInt(1,3);
 				var sound = new THREE.PositionalAudio( listener );
-				const audioElem = document.getElementById( 'breath'+(data.id) );
+				var audioElem;// = document.getElementById( data.sound );
 
-				console.log("audioElem", audioElem)
-				// ssi audio exist
-				if(audioElem){
-					sound.setMediaElementSource( audioElem );
-					sound.setRefDistance( 20 );
-					sound.setVolume( 10 );
-					audioElem.play();
-					m.add( sound );
 
+
+				var checkExist = setInterval(function() {
+					
+				   if (audioElem = document.getElementById( data.sound )) {
+
+				      clearInterval(checkExist);
+				      sound.setMediaElementSource( audioElem );
+					  sound.setRefDistance( 20 );
+					  sound.setVolume( 10 );
+					  audioElem.play();
+					  m.add( sound );
+
+
+				   }
+				}, 100); 
+
+
+
+				// if date != today
+				if(data.day == today){
+
+					// Bloom on the trace proportional to time left :
+
+					var curr_time = new Date().toLocaleTimeString();
+					var time_left =Math.ceil(  (hmsToSeconds(curr_time) - hmsToSeconds(data.hour))/60);
+
+					m.layers.enable( BLOOM_SCENE );
+					const color = new THREE.Color();
+					var luminance = ramp(time_left, 0, 1440 , 1, 0); // map minutes left to luminance value
+
+					color.setHSL( 0, 0 , luminance );
+					m.material.color = color;
+					m.material.needsUpdate = true
 				}
 
-				decals.push( m );
-				scene.add( m );
-
-
-			}
-			
-			function genTrace2(position, index) {
-
-				console.log("index ", index+1);
-
-
-				orientation.copy( mouseHelper.rotation );
-
-				if ( params.rotate ) orientation.z = Math.random() * 2 * Math.PI;
-
-				// Size of trace : 
-				const scale = params.minScale + Math.random() * ( params.maxScale - params.minScale );
-				size.set( scale, scale, scale );
-
-				const material =  new THREE.MeshPhongMaterial( {
-	
-						map: textureLoader.load( 'texture/cv/skinmask.png' ),
-						bumpMap :    textureLoader.load( 'texture/cv/blurotsu100trans.png' ),
-						bumpScale : 30,
-						opacity: 0.6,
-						depthWrite: false,
-    					alphaTest: 0.05,
-						shininess: 25,
-						transparent: true,
-						depthTest: true,
-						side: THREE.DoubleSide, 
-						polygonOffset: true,
-						polygonOffsetFactor: - 4,
-						wireframe: false
-					} );
-			
-				const m = new THREE.Mesh( new THREE.DecalGeometry( mesh, position, orientation, size ), material );
-
-
-
-				var nSound = getRandomInt(1,3);
-				var sound = new THREE.PositionalAudio( listener );
-				const audioElem = document.getElementById( 'breath'+(index+1) );
-				sound.setMediaElementSource( audioElem );
-				sound.setRefDistance( 20 );
-				sound.setVolume( 10 );
-				audioElem.play();
-				m.add( sound );
 				decals.push( m );
 				scene.add( m );
 
@@ -520,24 +563,108 @@
 
 			}
 
-			function onWindowResize() {
-
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-
-				renderer.setSize( window.innerWidth, window.innerHeight );
-
-			}
-
 			function animate() {
 
 				requestAnimationFrame( animate );
 
-				renderer.render( scene, camera );
+				//renderer.render( scene, camera );
+				render();
 
 				stats.update();
 
 			}
+
+			function render(){
+				// render scene with bloom
+				renderBloom( true );
+
+				// render the entire scene, then render bloom scene on top
+				finalComposer.render();
+
+			}
+
+			function renderBloom( mask ) {
+
+				if ( mask === true ) {
+
+					scene.traverse( darkenNonBloomed );
+					bloomComposer.render();
+					scene.traverse( restoreMaterial );
+
+				} else {
+
+					camera.layers.set( BLOOM_SCENE );
+					bloomComposer.render();
+					camera.layers.set( ENTIRE_SCENE );
+
+				}
+
+			}
+
+			function darkenNonBloomed( obj ) {
+
+
+				if ( obj.isMesh && bloomLayer.test( obj.layers ) === false ) {
+
+					materials[ obj.uuid ] = obj.material;
+					obj.material = darkMaterial;
+
+				}
+				else if(obj.isMesh && bloomLayer.test( obj.layers ) === true ){
+
+					var nu = obj.userData.freq; //0.5; //Hz
+					var c = new THREE.Color();
+					obj.material.color.getHSL(c);
+
+				/*	if (c.l<=0.2) dir=-1;
+					if (c.l>=0.8) dir=1; */
+
+
+					time = clock.getElapsedTime();
+					obj.material.color.setHSL( 0, 0 , 0.5 + 0.2*(Math.sin(6.28 * nu * time)));  // amplitude
+
+
+					 // nu varie de 0 à 0.5. freq d'osc par trace
+
+					// Math.exp(-time / tau); // Varie entre 1 a t=0 et 0 a t=infiny
+
+					/*
+					var luminance = ramp(time_left, 0, 1440 , 1, 0); 
+					console.log(luminance);
+					color.setHSL( 0, 0 , luminance );
+					m.material.color = color;
+					m.material.needsUpdate = true */
+				}
+
+			}
+
+			function restoreMaterial( obj ) {
+
+				if ( materials[ obj.uuid ] ) {
+
+					obj.material = materials[ obj.uuid ];
+					delete materials[ obj.uuid ];
+
+				}
+
+			}
+
+			window.onresize = function () {
+
+				const width = window.innerWidth;
+				const height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( width, height );
+
+				bloomComposer.setSize( width, height );
+				finalComposer.setSize( width, height );
+
+				render();
+
+			};
 
 		</script>
 
