@@ -43,23 +43,21 @@
 		<div id="container"></div>
 		
 	<script src="./js/socket.io.js"></script>
-	<!--<script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>-->
-	<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-	 <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/libs/stats.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	 <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/math/MeshSurfaceSampler.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	   <script src="./js/DecalGeometry.js"></script>
-	   <script src="./js/perlin2.js"></script>
-	     <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/Pass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/ShaderPass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/shaders/CopyShader.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/shaders/LuminosityHighPassShader.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="./js/three.min.js"></script>
+	<script src="./js/jquery.min.js"></script>
+	<script src="./js/stats.min.js"></script>
+	<script src="./js/OrbitControls.js"></script>
+	<script src="./js/MeshSurfaceSampler.js"></script>
+	<script src="./js/Pass.js"></script>
+	<script src="./js/ShaderPass.js"></script>
+	<script src="./js/CopyShader.js"></script>
+	<script src="./js/LuminosityHighPassShader.js"></script>
+	<script src="./js/EffectComposer.js"></script>
+	<script src="./js/RenderPass.js"></script>
+	<script src="./js/UnrealBloomPass.js"></script>
+	<script src="./js/DecalGeometry.js"></script>
+	<script src="./js/perlin2.js"></script>
 
-
-	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/EffectComposer.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/RenderPass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/postprocessing/UnrealBloomPass.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 	    <script type="x-shader/x-vertex" id="vertexshader">
 
@@ -264,20 +262,32 @@
 				//scene.background = new THREE.Color( 0x0000ff );
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 4000 ); // 1, 1000
-				camera.position.z = 1000; //120
+				//camera.position.z = 1000; //120
 				camera.add( listener );
+
+				camera.position.x = 122;
+				camera.position.y = 460;
+				camera.position.z = 1430;
 
 				// Limit zoom camera
 				const controls = new THREE.OrbitControls( camera, renderer.domElement );
+				
+				//controls.minDistance = 1000;
+				controls.maxDistance = 10000;
+				controls.maxPolarAngle = Math.PI / 2;
 				//controls.minDistance = 50;
 				//controls.maxDistance = 200;
 
 				scene.add( new THREE.AmbientLight( 0x443333 ) );
+				//scene.add( new THREE.AmbientLight( 0x620E1D ) );
 
+				//const dirLight1 = new THREE.DirectionalLight(0xEAD1E8, 1);//
 				const dirLight1 = new THREE.DirectionalLight( 0xffddcc, 1 );
+				//const dirLight1 = new THREE.DirectionalLight( 0x620E1D, 1 );
+				//const dirLight1 = new THREE.DirectionalLight( 0xffffff, 1 );
 				dirLight1.position.set( 1, 0.75, 0.5 );
 				scene.add( dirLight1 );
-
+	
 				const dirLight2 = new THREE.DirectionalLight( 0xccccff, 1 );
 				dirLight2.position.set( - 1, 0.75, - 0.5 );
 				scene.add( dirLight2 );
@@ -372,7 +382,7 @@
 						displacementMap : textureLoader.load( skinPath+'height.jpg'),
 						//metalnessMap : textureLoader.load( skinPath+'metallic.jpg'),
 						//roughnessMap : textureLoader.load( skinPath+'roughness.jpg'),
-						map: textureLoader.load( skinPath+'basecolor.jpg'),//( 'texture/Map-COL.jpg' ),
+						map: textureLoader.load( skinPath+'basecolorpink4.jpg'),//( 'texture/Map-COL.jpg' ),
 						//specularMap: textureLoader.load( 'texture/Map-SPEC.jpg' ), ??
 						normalMap: textureLoader.load( skinPath+'normal.jpg'),//textureLoader.load( 'texture/Infinite-Level_02_Tangent_SmoothUV.jpg' ), 
 						shininess: 25
@@ -398,7 +408,7 @@
 				mesh.geometry.attributes.position.needsUpdate = true;
 				mesh.geometry.computeVertexNormals();
 
-				
+				mesh.geometry.rotateX( - Math.PI / 2 );
 
 
 				scene.add( mesh );
@@ -665,6 +675,8 @@
 				render();
 
 			};
+
+
 
 		</script>
 

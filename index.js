@@ -21,13 +21,17 @@ var peak = 100;
 
         var vertices = mesh.geometry.attributes.position.array;
           for (var i = 0; i <= vertices.length; i += 3) {
-            vertices[i+2] = peak * noise.perlin2(
+            vertices[i+2] = peak * perlin.noise.perlin2(
                 (mesh.position.x + vertices[i])/smoothing, 
                 (mesh.position.z + vertices[i+1])/smoothing
             );
         }
+
+      mesh.geometry.rotateX( - Math.PI / 2 );
+
         mesh.geometry.attributes.position.needsUpdate = true;
         mesh.geometry.computeVertexNormals();
+
 
 sampler = new THREE.MeshSurfaceSampler( mesh )
             .setWeightAttribute( 'color' )
@@ -227,9 +231,6 @@ app.post('/traces', (req, res) => {
                       res.send(trace);
                     }
                   }); 
-
-             
-              
 
             }
             
