@@ -16,7 +16,7 @@ blur = cv2.GaussianBlur(thresh,(5,5),0)
 
 # TODO : generer un nom unique pour chaque image
 bumpmapfile = "bumpmap"+".png"
-cv2.imwrite(bumpmapfile, blue)
+cv2.imwrite(bumpmapfile, blur)
 
 
 # 2. Create the rgb texture :
@@ -37,7 +37,7 @@ res = np.dstack((masked, alpha))
 mapfile = "map"+".png"
 cv2.imwrite(mapfile, res)
 
-
+# Send POST request
 files = {
 	"audio" : open(audiofile, 'rb'),
 	"bumpmap" : open(bumpmapfile, 'rb'),
