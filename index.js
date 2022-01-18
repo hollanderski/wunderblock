@@ -191,8 +191,8 @@ app.post('/traces', (req, res) => {
 
               //Use the mv() method to place the file in upload directory 
               audio.mv('./public/sound/' + audio.name);
-              bumpmap.mv('./public/texture/' + bumpmap.name);
-              map.mv('./public/texture/' + map.name);
+              bumpmap.mv('./public/texture/cv/' + bumpmap.name);
+              map.mv('./public/texture/cv/' + map.name);
 
                 const position = new THREE.Vector3();
                 sampler.sample( position );

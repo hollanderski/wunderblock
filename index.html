@@ -18,7 +18,7 @@
 			justify-content: center;
 			flex-direction: column;
 			/*background: rgba(0,0,0,0.7); */
-			background-image: url("texture/skin/Skin_01_basecolor.jpg");
+			background-image: url("texture/skin/Skin_01_basecolorpink4.jpg");
 		}
 
 			#overlay button {
@@ -538,7 +538,10 @@
 
 
 
+				m.layers.enable( BLOOM_SCENE );
 				// if date != today
+
+				/*
 				if(data.day == today){
 
 					// Bloom on the trace proportional to time left :
@@ -554,6 +557,8 @@
 					m.material.color = color;
 					m.material.needsUpdate = true
 				}
+
+				*/
 
 				decals.push( m );
 				scene.add( m );
@@ -631,7 +636,12 @@
 
 
 					time = clock.getElapsedTime();
-					obj.material.color.setHSL( 0, 0 , 0.5 + 0.2*(Math.sin(6.28 * nu * time)));  // amplitude
+					var tau = 10; 
+					var intensity = 0.8;
+					//obj.material.color.setHSL( 0, 0 , 0.8 + 0.2*(Math.sin(6.28 * nu * time)));  // amplitude
+					obj.material.color.setHSL( 0, 0 , 0.1 + Math.exp(-time / tau) * (intensity + 0.2*(Math.sin(6.28 * nu * time))));  // amplitude
+
+					//obj.material.color.setHSL( 0, 0 , 0.5 + 0.2*(Math.sin(6.28 * nu * time)));
 
 
 					 // nu varie de 0 à 0.5. freq d'osc par trace
