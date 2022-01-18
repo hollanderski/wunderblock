@@ -44,6 +44,6 @@ files = {
 	"map" : open(mapfile, 'rb'),
 }
 
-request.post('wunderblock.ninonlm.com', files=files)
+response = requests.post('http://wunderblock.ninonlm.com/traces', files=files)
 
-
+print(response.content)
