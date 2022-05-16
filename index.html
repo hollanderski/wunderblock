@@ -116,15 +116,14 @@
 
 
 
-			//var socket = io.connect("localhost:3000");//("145.239.37.162:3000")//( "http://localhost:3000");
-			var socket = io(); //io.connect("http://xoqhbtq.cluster030.hosting.ovh.net")
+			
+			var socket = io(); 
 
 			socket.on("createTrace", function(message){
 
 				createAudio(message.sound);
 				genTrace(message); 
 				
-				//newTrace(message)
 
            	});
 
@@ -279,12 +278,7 @@
 				//controls.maxDistance = 200;
 
 				scene.add( new THREE.AmbientLight( 0x443333 ) );
-				//scene.add( new THREE.AmbientLight( 0x620E1D ) );
-
-				//const dirLight1 = new THREE.DirectionalLight(0xEAD1E8, 1);//
 				const dirLight1 = new THREE.DirectionalLight( 0xffddcc, 1 );
-				//const dirLight1 = new THREE.DirectionalLight( 0x620E1D, 1 );
-				//const dirLight1 = new THREE.DirectionalLight( 0xffffff, 1 );
 				dirLight1.position.set( 1, 0.75, 0.5 );
 				scene.add( dirLight1 );
 	
