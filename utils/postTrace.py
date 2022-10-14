@@ -14,3 +14,7 @@ files = {
 response = requests.post('http://wunderblock.ninonlm.com/traces', files=files)
 
 print(response.content)
+
+import uuid
+
+unique_filename = str(uuid.uuid4())
